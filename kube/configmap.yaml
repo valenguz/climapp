@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: climapp-config
+data:
+  database-url: "postgresql://climapp_user:climapp_pass@climapp-db-service:5432/climapp"
+  cors-origins: "http://localhost:3000,http://climapp-frontend-service:3000"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+data:
+  api-url: "http://climapp-backend-service:8000"

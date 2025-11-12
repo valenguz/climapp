@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: climapp-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: climapp-backend
+  template:
+    metadata:
+      labels:
+        app: climapp-backend
+    spec:
+      containers:
+      - name: backend
+        image: tuusuario/climapp-backend:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: climapp-config
+              key: database-url
+        - name: CORS_ORIGINS
+          valueFrom:
+            configMapKeyRef:
+              name: climapp-config
+              key: cors-origins
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: climapp-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: climapp-frontend
+  template:
+    metadata:
+      labels:
+        app: climapp-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: tuusuario/climapp-frontend:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: NEXT_PUBLIC_API_URL
+          valueFrom:
+            configMapKeyRef:
+              name: frontend-config
+              key: api-url
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: climapp-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: climapp-db
+  template:
+    metadata:
+      labels:
+        app: climapp-db
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: "climapp"
+        - name: POSTGRES_USER
+          value: "climapp_user"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: climapp-secrets
+              key: postgres-password
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: postgres-data
+      volumes:
+      - name: postgres-data
+        persistentVolumeClaim:
+          claimName: postgres-pvc
