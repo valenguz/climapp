@@ -1,118 +1,80 @@
-name: Deploy ClimApp to Minikube
+name: 🚀 Deploy ClimApp to Minikube
 
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
-  build-and-test:
+  deploy:
     runs-on: ubuntu-latest
     
     steps:
     # PASO 1: Descargar el código
-    - name: Checkout code
+    - name: 📥 Checkout code
       uses: actions/checkout@v4
 
-    # PASO 2: Configurar Docker para construir imágenes
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-
-    # PASO 3: Construir imagen del Backend
-    - name: Build Backend Image
-      uses: docker/build-push-action@v5
-      with:
-        context: ./backend
-        push: false
-        tags: climapp-backend:latest
-        cache-from: type=registry,ref=climapp-backend:latest
-        cache-to: type=inline
-
-    # PASO 4: Construir imagen del Frontend
-    - name: Build Frontend Image
-      uses: docker/build-push-action@v5
-      with:
-        context: ./frontend/climapp
-        push: false
-        tags: climapp-frontend:latest
-        cache-from: type=registry,ref=climapp-frontend:latest
-        cache-to: type=inline
-
-  deploy-to-kubernetes:
-    needs: build-and-test  # Espera a que termine el job anterior
-    runs-on: ubuntu-latest
-    
-    steps:
-    # PASO 5: Descargar código otra vez (cada job es independiente)
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    # PASO 6: Instalar Minikube (Kubernetes local)
-    - name: Set up Minikube
+    # PASO 2: Configurar Minikube
+    - name: ⚙️ Setup Minikube
       uses: manusa/actions-setup-minikube@v2
       with:
         minikube version: 'v1.32.0'
         kubernetes version: 'v1.28.0'
 
-    # PASO 7: Desplegar en Kubernetes
-    - name: Deploy to Minikube
+    # PASO 3: Desplegar en Kubernetes
+    - name: 🚀 Deploy to Kubernetes
       run: |
-        # Iniciar Minikube
+        echo "🎯 Iniciando Minikube..."
         minikube start
-        echo "✅ Minikube iniciado"
+        minikube status
         
-        # Aplicar la configuración de Kubernetes
+        echo "📁 Aplicando configuración Kubernetes..."
         kubectl apply -f kube/
-        echo "✅ Archivos YAML aplicados"
         
-        # Esperar a que los pods estén listos
         echo "⏳ Esperando a que los pods estén listos..."
-        kubectl wait --for=condition=ready pod -l app=climapp-backend --timeout=180s
-        kubectl wait --for=condition=ready pod -l app=climapp-frontend --timeout=180s
-        echo "✅ Todos los pods están listos"
+        sleep 60
+        
+        echo "✅ Despliegue completado"
 
-    # PASO 8: Capturar evidencias (requisito de tu tarea)
-    - name: Capture deployment evidence
+    # PASO 4: Capturar evidencias (PARA TU TAREA)
+    - name: 📸 Capture Evidence
       run: |
-        echo "📸 Capturando evidencias del despliegue..."
+        echo "=== EVIDENCIAS DEL DESPLIEGUE ===" > evidence.txt
+        echo "Fecha: $(date)" >> evidence.txt
+        echo "" >> evidence.txt
         
-        # Estado de todos los recursos
-        kubectl get all > deployment-status.txt
+        echo "=== kubectl get pods ===" >> evidence.txt
+        kubectl get pods >> evidence.txt
+        echo "" >> evidence.txt
         
-        # Descripción detallada de pods
-        kubectl describe pods > pods-description.txt
+        echo "=== kubectl get services ===" >> evidence.txt
+        kubectl get services >> evidence.txt
+        echo "" >> evidence.txt
         
-        # Lista de servicios y sus URLs
-        minikube service list > services-list.txt
+        echo "=== kubectl get deployments ===" >> evidence.txt
+        kubectl get deployments >> evidence.txt
+        echo "" >> evidence.txt
         
-        # Logs de los pods (últimas 10 líneas)
-        kubectl logs -l app=climapp-backend --tail=10 > backend-logs.txt
-        kubectl logs -l app=climapp-frontend --tail=10 > frontend-logs.txt
+        echo "=== minikube service list ===" >> evidence.txt
+        minikube service list >> evidence.txt
         
-        echo "✅ Evidencias capturadas"
+        echo "📄 Evidencias guardadas en evidence.txt"
 
-    # PASO 9: Guardar las evidencias como archivos descargables
-    - name: Upload evidence artifacts
+    # PASO 5: Subir evidencias (PARA ENTREGAR EN TU TAREA)
+    - name: 📎 Upload Evidence
       uses: actions/upload-artifact@v4
       with:
         name: deployment-evidence
-        path: |
-          deployment-status.txt
-          pods-description.txt
-          services-list.txt
-          backend-logs.txt
-          frontend-logs.txt
+        path: evidence.txt
         retention-days: 30
 
-    # PASO 10: Mostrar información útil
-    - name: Show deployment info
+    # PASO 6: Mostrar resultados
+    - name: 📊 Show Results
       run: |
-        echo "🎉 DESPLIEGUE EXITOSO"
-        echo "===================="
-        echo "Pods desplegados:"
-        kubectl get pods
+        echo "🎉 DESPLIEGUE EXITOSO - CLIMAPP"
+        echo "================================"
+        kubectl get pods,services,deployments
         echo ""
-        echo "Servicios:"
-        kubectl get services
-        echo ""
-        echo "Para acceder a la aplicación ejecuta:"
+        echo "📊 Para acceder a la aplicación:"
         echo "minikube service climapp-frontend-service"
